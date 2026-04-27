@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jefe de Acopio - Eco-Logística</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-amber-700 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">📦 Eco-Logística Verde en Movimiento| Jefe de Acopio</h1>
+            <a href="index.html" class="hover:underline text-amber-200">← Logout</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-6 p-4 space-y-8">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <section class="bg-white p-5 rounded-lg shadow border-t-4 border-green-500">
+                <h2 class="font-bold text-green-800 mb-4 flex items-center gap-2">📄 Fichas listas para acta</h2>
+                <div class="overflow-y-auto max-h-64">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-gray-50"><tr><th class="p-2 border">ID Ficha</th><th class="p-2 border">Acción</th></tr></thead>
+                        <tbody id="tablaFichasAprobadas"></tbody>
+                    </table>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-3 italic">Solo aparecen fichas con revisión visual aprobada por Admisión.</p>
+            </section>
+
+            <section class="bg-white p-5 rounded-lg shadow border-t-4 border-amber-500">
+                <h2 class="font-bold text-amber-800 mb-4">Crear acta de consolidación</h2>
+                <form id="formCrearActa" class="space-y-4">
+                    <input type="text" id="clienteId" required class="w-full p-2 border rounded" placeholder="ID del Cliente (Ej. CLI-001)">
+                    <div class="p-3 bg-amber-50 rounded border border-amber-200 text-xs">
+                        <p class="font-bold mb-1">Fichas vinculadas:</p>
+                        <ul id="fichasSeleccionadas" class="list-disc ml-4 text-amber-900"></ul>
+                    </div>
+                    <button type="submit" class="w-full bg-amber-600 text-white py-2 rounded font-bold hover:bg-amber-700">Generar acta (REQ-005)</button>
+                </form>
+            </section>
+
+            <section class="bg-white p-5 rounded-lg shadow border-t-4 border-blue-500">
+                <h2 class="font-bold text-blue-800 mb-4">🔍 Verificación de ecoetiquetas</h2>
+                <p class="text-xs text-gray-600 mb-2">Simulador de escáner físico de paquetes:</p>
+                
+                <button onclick="generarPaquetePrueba()" class="text-[10px] bg-gray-200 p-2 mb-3 rounded border border-gray-400 hover:bg-gray-300 w-full text-center font-bold">
+                   (Simular escáner)
+                </button>
+                
+                <div class="flex gap-1">
+                    <input type="text" id="ecoetiqueta" class="flex-1 p-2 border rounded text-sm bg-gray-50" placeholder="Escanear Ecoetiqueta">
+                    <button onclick="consultarPaquete()" class="bg-blue-600 text-white px-4 rounded font-bold hover:bg-blue-700">Ok</button>
+                </div>
+
+                <div id="resPaquete" class="mt-4 hidden p-3 bg-gray-50 border border-gray-300 rounded text-sm space-y-2">
+                    </div>
+            </section>
+        </div>
+
+        <section class="bg-white p-6 rounded-lg shadow-md border-t-4 border-slate-700">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-xl font-bold">Tablero de auditoría de actas (REQ-006)</h2>
+                
+                <div class="flex gap-3">
+                    <select id="filtroEstado" onchange="filtrarActas()" class="p-2 border border-gray-300 rounded text-sm bg-gray-50 font-bold">
+                        <option value="TODOS">Todas las actas</option>
+                        <option value="CREADO">🟡 Pendientes de firma</option>
+                        <option value="FIRMADA">🟢 Listas para despacho (Firmadas)</option>
+                    </select>
+                    <button onclick="cargarTodo()" class="p-2 bg-gray-200 rounded hover:bg-gray-300 border border-gray-400" title="Actualizar Tablero">🔄 Actualizar</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="bg-slate-700 text-white">
+                        <tr>
+                            <th class="p-3 border">ID acta</th>
+                            <th class="p-3 border">Cliente</th>
+                            <th class="p-3 border">Estado</th>
+                            <th class="p-3 border">Fecha</th>
+                            <th class="p-3 border text-center">Acción (REQ-005)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaActasMaster"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ==========================================
+        // 1. LÓGICA DE ACTAS Y TABLERO
+        // ==========================================
+        let actasOriginales = [];
+
+        async function cargarFichasInsumo() {
+            try {
+                const res = await fetch('/api/fichas');
+                if(res.ok) {
+                    const fichas = await res.json();
+                    const tbody = document.getElementById('tablaFichasAprobadas');
+                    tbody.innerHTML = "";
+                    fichas.filter(f => f.estado === 'APROBADA').forEach(f => {
+                        tbody.innerHTML += `<tr>
+                            <td class="p-2 border font-mono">${f.id}</td>
+                            <td class="p-2 border text-center">
+                                <button onclick="vincularFicha('${f.id}')" class="text-green-600 font-bold hover:underline">Vincular</button>
+                            </td>
+                        </tr>`;
+                    });
+                }
+            } catch (error) { console.error("Error cargando fichas."); }
+        }
+
+        function vincularFicha(id) {
+            const lista = document.getElementById('fichasSeleccionadas');
+            const li = document.createElement('li');
+            li.innerText = id;
+            lista.appendChild(li);
+        }
+
+        async function cargarTodo() {
+            cargarFichasInsumo();
+            try {
+                const res = await fetch('/api/actas');
+                if(res.ok) {
+                    actasOriginales = await res.json();
+                    filtrarActas(); // Aplica el filtro automáticamente al cargar
+                }
+            } catch (error) { console.error("Error cargando actas."); }
+        }
+
+        function filtrarActas() {
+            const estado = document.getElementById('filtroEstado').value;
+            const tbody = document.getElementById('tablaActasMaster');
+            tbody.innerHTML = "";
+
+            const actasFiltradas = actasOriginales.filter(a => estado === "TODOS" || a.estado === estado);
+
+            if(actasFiltradas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No hay actas en este estado.</td></tr>`;
+                return;
+            }
+
+            actasFiltradas.forEach(a => {
+                // Aquí cambiamos 'CREADA' por 'CREADO'
+                const colorEstado = a.estado === 'CREADO' ? 'text-amber-600' : 'text-green-600';
+                tbody.innerHTML += `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-mono font-bold">${a.id}</td>
+                    <td class="p-3">${a.clienteId}</td>
+                    <td class="p-3 font-bold ${colorEstado}">${a.estado}</td>
+                    <td class="p-3 text-gray-500">${new Date(a.fechaCreacion).toLocaleDateString()}</td>
+                    <td class="p-3 text-center">
+                        ${a.estado === 'CREADO' ? 
+                            `<button onclick="registrarFirma('${a.id}')" class="bg-green-100 text-green-800 px-3 py-1 rounded-full border border-green-400 font-bold hover:bg-green-200 transition">✍️ Registrar Firma</button>` : 
+                            `<span class="text-xs text-gray-400 font-bold">🔒 Auditoría Bloqueada</span>`}
+                    </td>
+                </tr>`;
+            });
+        }
+
+        async function registrarFirma(id) {
+            if(!confirm("¿Formalizar el traspaso de custodia? Esto bloqueará ediciones futuras (REQ-005).")) return;
+            try {
+                const res = await fetch(`/api/actas/${id}/firmar`, { method: 'PATCH' });
+                if(res.ok) {
+                    alert("✅ Acta Firmada Exitosamente. Custodia Legal Formalizada.");
+                    cargarTodo(); // Recargar la tabla
+                } else {
+                    alert("Error al firmar el acta.");
+                }
+            } catch (error) { alert("Error de conexión."); }
+        }
+
+        document.getElementById('formCrearActa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cliente = document.getElementById('clienteId').value;
+            try {
+                const res = await fetch('/api/actas', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ clienteId: cliente })
+                });
+                if(res.ok) {
+                    alert("✅ Acta generada. Búscala en el tablero inferior para firmarla.");
+                    document.getElementById('fichasSeleccionadas').innerHTML = "";
+                    document.getElementById('formCrearActa').reset();
+                    cargarTodo(); // Recarga la tabla inmediatamente
+                }
+            } catch (error) { alert("Error creando acta."); }
+        });
+
+        // ==========================================
+        // 2. LÓGICA DE PAQUETES Y ECOETIQUETAS
+        // ==========================================
+        let paqueteActual = "";
+
+        async function generarPaquetePrueba() {
+            const eco = "ECO-" + Math.floor(Math.random()*9000);
+            try {
+                await fetch('/api/paquetes/registrar-prueba', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ecoetiqueta: eco })
+                });
+                // Autocompletamos el campo de texto para facilitar la prueba
+                document.getElementById('ecoetiqueta').value = eco;
+                alert("📦 Simulador: Escáner leyó la etiqueta '" + eco + "'. Ahora haz clic en 'Ok'.");
+            } catch(error) { alert("Error simulando escáner."); }
+        }
+
+        async function consultarPaquete() {
+            const eco = document.getElementById('ecoetiqueta').value;
+            if(!eco) {
+                alert("Por favor escanee o ingrese una ecoetiqueta primero.");
+                return;
+            }
+            
+            paqueteActual = eco;
+            const resDiv = document.getElementById('resPaquete');
+
+            try {
+                const res = await fetch(`/api/paquetes/${eco}`);
+                if(res.ok) {
+                    const paquete = await res.json();
+                    resDiv.classList.remove('hidden');
+                    
+                    // Renderizar botones solo si está PENDIENTE
+                    let botonesHTML = '';
+                    if (paquete.estado === 'PENDIENTE_VERIFICACION') {
+                        botonesHTML = `
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="aceptarPaquete()" class="flex-1 bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700 transition shadow">✅ Aceptar</button>
+                                <button onclick="rechazarPaquete()" class="flex-1 bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700 transition shadow">❌ Rechazar</button>
+                            </div>
+                        `;
+                    } else {
+                        botonesHTML = `<p class="text-green-700 font-bold mt-2">✔️ Este paquete ya fue procesado.</p>`;
+                    }
+
+                    resDiv.innerHTML = `
+                        <p class="font-bold text-blue-900 border-b pb-1 mb-2">Datos del Paquete</p>
+                        <p><strong>Ecoetiqueta:</strong> <span class="font-mono text-gray-700">${paquete.ecoetiqueta}</span></p>
+                        <p><strong>Estado Actual:</strong> <span class="font-bold text-amber-600">${paquete.estado}</span></p>
+                        ${botonesHTML}
+                    `;
+                } else {
+                    alert("❌ Paquete no encontrado en el sistema.");
+                }
+            } catch (err) { alert("Error de red."); }
+        }
+
+        async function aceptarPaquete() {
+            try {
+                const res = await fetch(`/api/paquetes/${paqueteActual}/aceptar`, { method: 'PATCH' });
+                if(res.ok) { 
+                    alert("✅ Paquete verificado y ACEPTADO en la Zona de Acopio (REQ-010)."); 
+                    consultarPaquete(); // Recargar los datos del paquete
+                }
+            } catch (err) { alert("Error al aceptar."); }
+        }
+
+        async function rechazarPaquete() {
+            const motivo = prompt("⚠️ REQ-014: Ingrese el motivo obligatorio del rechazo de la carga (Ej. Caja rota, humedad):");
+            if(!motivo) {
+                alert("Debe ingresar un motivo para poder rechazar el paquete.");
+                return;
+            }
+            try {
+                const res = await fetch(`/api/paquetes/${paqueteActual}/rechazar`, { 
+                    method: 'PATCH', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ motivo: motivo })
+                });
+                if(res.ok) { 
+                    alert("❌ Paquete RECHAZADO y enviado a zona de cuarentena."); 
+                    consultarPaquete(); // Recargar los datos del paquete
+                }
+            } catch (err) { alert("Error al rechazar."); }
+        }
+
+        // Cargar todo al iniciar la página
+        window.onload = cargarTodo;
+    </script>
+</body>
+</html>

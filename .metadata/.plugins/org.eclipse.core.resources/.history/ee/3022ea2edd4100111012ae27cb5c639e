@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jefe de Acopio - Eco-Logística</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-amber-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">📦 Eco-Logística | Jefe de Acopio</h1>
+            <a href="index.html" class="hover:underline text-amber-200">← Volver al Dashboard</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-8 p-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <section class="bg-white p-6 rounded-lg shadow-md border-t-4 border-amber-500">
+            <h2 class="text-2xl font-bold text-amber-800 mb-4">Gestión de actas de consolidación</h2>
+            
+            <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded">
+                <h3 class="font-bold mb-2">Crear nueva acta (REQ-005)</h3>
+                <form id="formCrearActa" class="flex gap-2">
+                    <input type="text" id="clienteId" required class="flex-1 p-2 border border-gray-300 rounded focus:ring-amber-500 focus:border-amber-500" placeholder="ID del Cliente (Ej. CLI-001)">
+                    <button type="submit" class="bg-amber-600 text-white font-bold py-2 px-4 rounded hover:bg-amber-700">Crear</button>
+                </form>
+                <div id="msgActaCreada" class="mt-2 text-sm text-green-700 font-bold hidden"></div>
+            </div>
+
+            <div class="p-4 bg-gray-50 border border-gray-200 rounded">
+                <h3 class="font-bold mb-2">Firmar acta (REQ-007)</h3>
+                <form id="formFirmarActa" class="flex gap-2">
+                    <input type="text" id="actaIdFirma" required class="flex-1 p-2 border border-gray-300 rounded focus:ring-amber-500 focus:border-amber-500" placeholder="ID del Acta (Ej. ACT-...)">
+                    <button type="submit" class="bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700">Firmar</button>
+                </form>
+            </div>
+        </section>
+
+
+        <section class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
+            <h2 class="text-2xl font-bold text-blue-800 mb-4">Verificación física de paquetes</h2>
+            
+            <div class="mb-4 text-right">
+                <button onclick="generarPaquetePrueba()" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">🛠 Generar Paquete de Prueba en BD</button>
+            </div>
+
+            <form id="formConsultarPaquete" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Leer Ecoetiqueta del paquete</label>
+                <div class="flex gap-2 mt-1">
+                    <input type="text" id="ecoetiquetaConsulta" required class="flex-1 p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" placeholder="Ej. ECO-999">
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700">Consultar (REQ-013)</button>
+                </div>
+            </form>
+
+            <div id="resultadoPaquete" class="hidden border border-gray-200 rounded p-4 bg-gray-50 space-y-3">
+                <p><strong>Ecoetiqueta:</strong> <span id="resEco"></span></p>
+                <p><strong>Estado:</strong> <span id="resEstadoPaq" class="font-bold"></span></p>
+                <p><strong>Observaciones:</strong> <span id="resObs"></span></p>
+                
+                <div id="accionesPaquete" class="grid grid-cols-2 gap-4 mt-4 hidden">
+                    <button onclick="aceptarPaquete()" class="bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700">✅ Aceptar (REQ-010)</button>
+                    <button onclick="rechazarPaquete()" class="bg-red-600 text-white font-bold py-2 px-4 rounded hover:bg-red-700">❌ Rechazar (REQ-014)</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- LÓGICA DE ACTAS ---
+        document.getElementById('formCrearActa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const clienteId = document.getElementById('clienteId').value;
+            try {
+                const res = await fetch('/api/actas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clienteId: clienteId })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const msg = document.getElementById('msgActaCreada');
+                    msg.innerText = `Acta creada. ID: ${data.id} (Estado: ${data.estado})`;
+                    msg.classList.remove('hidden');
+                    document.getElementById('actaIdFirma').value = data.id; // Autollenar para firmar
+                }
+            } catch (err) { alert('Error de conexión'); }
+        });
+
+        document.getElementById('formFirmarActa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('actaIdFirma').value;
+            try {
+                const res = await fetch(`/api/actas/${id}/firmar`, { method: 'PATCH' });
+                if (res.ok) {
+                    alert(await res.text());
+                } else {
+                    alert('Error: Verifique que el acta exista y esté en estado CREADA.');
+                }
+            } catch (err) { alert('Error de conexión'); }
+        });
+
+        // --- LÓGICA DE PAQUETES ---
+        let paqueteActual = "";
+
+        // Herramienta de desarrollo
+        async function generarPaquetePrueba() {
+            const ecoRandom = "ECO-" + Math.floor(Math.random() * 10000);
+            await fetch('/api/paquetes/registrar-prueba', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ecoetiqueta: ecoRandom })
+            });
+            document.getElementById('ecoetiquetaConsulta').value = ecoRandom;
+            alert("Se inyectó el paquete " + ecoRandom + " en la BD simulando el escaneo.");
+        }
+
+        document.getElementById('formConsultarPaquete').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const eco = document.getElementById('ecoetiquetaConsulta').value;
+            paqueteActual = eco;
+            try {
+                const res = await fetch(`/api/paquetes/${eco}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('resEco').innerText = data.ecoetiqueta;
+                    document.getElementById('resEstadoPaq').innerText = data.estado;
+                    document.getElementById('resObs').innerText = data.observaciones || 'Ninguna';
+                    
+                    const acciones = document.getElementById('accionesPaquete');
+                    if (data.estado === 'PENDIENTE_VERIFICACION') {
+                        acciones.classList.remove('hidden');
+                    } else {
+                        acciones.classList.add('hidden');
+                    }
+                    document.getElementById('resultadoPaquete').classList.remove('hidden');
+                } else {
+                    alert("Paquete no encontrado.");
+                }
+            } catch (err) { alert("Error de red."); }
+        });
+
+        async function aceptarPaquete() {
+            try {
+                const res = await fetch(`/api/paquetes/${paqueteActual}/aceptar`, { method: 'PATCH' });
+                if (res.ok) {
+                    alert("Paquete verificado y aceptado.");
+                    document.getElementById('formConsultarPaquete').dispatchEvent(new Event('submit')); // Recargar
+                }
+            } catch (err) { alert("Error."); }
+        }
+
+        async function rechazarPaquete() {
+            const motivo = prompt("Ingrese el motivo obligatorio del rechazo de la carga:");
+            if (!motivo) {
+                alert("Debe ingresar un motivo para rechazar.");
+                return;
+            }
+            try {
+                const res = await fetch(`/api/paquetes/${paqueteActual}/rechazar`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ motivo: motivo })
+                });
+                if (res.ok) {
+                    alert("Paquete rechazado y enviado a zona de cuarentena/bodega.");
+                    document.getElementById('formConsultarPaquete').dispatchEvent(new Event('submit')); // Recargar
+                }
+            } catch (err) { alert("Error."); }
+        }
+    </script>
+</body>
+</html>

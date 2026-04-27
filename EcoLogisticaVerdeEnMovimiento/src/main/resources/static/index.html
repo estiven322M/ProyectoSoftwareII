@@ -3,43 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eco-Logística Verde en Movimiento</title>
+    <title>Login - Eco-Logística Verde</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
-
-    <nav class="bg-green-700 text-white p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">🌱 Eco-Logística Verde en Movimiento</h1>
-            <span class="text-sm font-light">Logística sostenibles</span>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen">
+    
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border-t-8 border-green-600">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-green-700 mb-2">🌱 Eco-Logística</h1>
+            <p class="text-gray-500 text-sm">Logística Eco</p>
         </div>
-    </nav>
 
-    <main class="container mx-auto mt-10 p-4">
-        <h2 class="text-3xl font-semibold text-center mb-8 text-green-800">Panel de control</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Seleccione su perfil (Rol)</label>
+                <select id="rolSelect" class="w-full p-3 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 bg-gray-50">
+                    <option value="fichas.html">📄 Agente de admisión Eco</option>
+                    <option value="acopio.html">📦 Jefe de acopio Eco</option>
+                    <option value="flota.html">🚚 Coordinador / Técnico de flota Eco</option>
+                </select>
+            </div>
             
-            <a href="fichas.html" class="block bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow border-t-4 border-green-500">
-                <div class="text-green-600 text-4xl mb-3">📄</div>
-                <h3 class="text-xl font-bold mb-2">Agente de admisión Eco</h3>
-                <p class="text-gray-600 text-sm">Crear, consultar y aprobar fichas de admisión (REQ-001 a 003).</p>
-            </a>
-
-            <div class="block bg-gray-200 p-6 rounded-lg shadow border-t-4 border-gray-400 opacity-70 cursor-not-allowed">
-                <div class="text-gray-500 text-4xl mb-3">📦</div>
-                <h3 class="text-xl font-bold mb-2">Jefe de acopio Eco</h3>
-                <p class="text-gray-600 text-sm">Próximamente: Actas de Consolidación y Verificación de Paquetes.</p>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Clave de acceso</label>
+                <input type="password" id="claveInput" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 bg-gray-50" placeholder="Ingrese su clave asignada">
             </div>
 
-            <div class="block bg-gray-200 p-6 rounded-lg shadow border-t-4 border-gray-400 opacity-70 cursor-not-allowed">
-                <div class="text-gray-500 text-4xl mb-3">🚚</div>
-                <h3 class="text-xl font-bold mb-2">Coordinador / Flota</h3>
-                <p class="text-gray-600 text-sm">Próximamente: Órdenes de Despacho y Biométrico.</p>
-            </div>
+            <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md hover:bg-green-700 transition shadow-lg text-lg">
+                Ingresar
+            </button>
+        </form>
 
+        <div id="loginError" class="mt-4 hidden p-3 bg-red-100 border border-red-400 text-red-800 rounded text-sm text-center font-bold">
         </div>
-    </main>
+    </div>
 
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const clave = document.getElementById('claveInput').value;
+            const destino = document.getElementById('rolSelect').value;
+
+            // Validación de seguridad (Simulando la validación del backend)
+            if(clave === '1094948414') {
+                // Redirigir a la pantalla del rol seleccionado
+                window.location.href = destino;
+            } else {
+                const errorDiv = document.getElementById('loginError');
+                errorDiv.innerText = "❌ Clave incorrecta. Acceso denegado.";
+                errorDiv.classList.remove('hidden');
+            }
+        });
+    </script>
 </body>
 </html>

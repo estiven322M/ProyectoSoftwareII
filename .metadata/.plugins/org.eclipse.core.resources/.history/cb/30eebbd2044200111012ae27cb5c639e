@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despachos y Flota - Eco-Logística</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-indigo-700 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">🚚 Eco-Logística Verde en Movimiento | Despachos y flota</h1>
+            <a href="index.html" class="hover:underline text-indigo-200">← Inicio</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-8 p-4 grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+		<section class="bg-white p-6 rounded-lg shadow-md border-t-4 border-indigo-500">
+		    <h2 class="text-2xl font-bold text-indigo-800 mb-4">🚛 Despacho: Crear orden (REQ-007)</h2>
+		    
+		    <form id="formCrearOrden" class="space-y-4 bg-indigo-50 p-4 rounded border border-indigo-200">
+		        <div>
+		            <label class="block text-sm font-bold">Seleccionar acta firmada</label>
+		            <select id="actaSelect" required class="w-full p-2 border rounded bg-white">
+		                <option value="">Cargando actas firmadas...</option>
+		            </select>
+		        </div>
+		        <div>
+		            <label class="block text-sm font-bold">Asignar ruta</label>
+		            <select id="rutaSelect" required class="w-full p-2 border rounded bg-white">
+		                <option value="">Seleccione Ruta...</option>
+		                <option value="RUTA-NORTE-01">Norte - Centro distribución A</option>
+		                <option value="RUTA-SUR-05">Sur - Zona industrial B</option>
+		            </select>
+		        </div>
+		        <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 rounded hover:bg-indigo-700 transition">
+		            Vincular y crear orden
+		        </button>
+		    </form>
+		</section>
+
+
+
+        <section class="bg-white p-6 rounded-lg shadow-md border-t-4 border-slate-800">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Control de salida biométrico</h2>
+            <p class="text-sm text-gray-600 mb-4">Lector de huella digital para el conductor del vehículo.</p>
+
+            <form id="formBiometrico" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">ID orden de despacho asignada</label>
+                    <input type="text" id="bioOrdenId" required class="mt-1 block w-full p-2 border border-gray-300 rounded" placeholder="Ej. ORD-123">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Identificación del conductor</label>
+                    <input type="text" id="bioConductorId" required class="mt-1 block w-full p-2 border border-gray-300 rounded" placeholder="Número de cédula">
+                </div>
+
+                <div class="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-center mt-4">
+                    <p class="font-bold text-gray-700 mb-2">Simulador lector de huella ☝️</p>
+                    <select id="simuladorHuella" class="p-2 border border-gray-400 rounded w-full font-bold text-center">
+                        <option value="true" class="text-green-600">🟢 HUELLA CORRECTA (Autorizar)</option>
+                        <option value="false" class="text-red-600">🔴 HUELLA INVÁLIDA (Rechazar)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full bg-slate-800 text-white font-bold py-3 px-4 rounded hover:bg-slate-900 shadow-lg text-lg">
+                    Escanear y procesar salida
+                </button>
+            </form>
+
+            <div id="resultadoBiometrico" class="mt-4 hidden p-4 rounded text-center border-2 font-bold shadow-inner">
+                </div>
+        </section>
+
+    </main>
+
+    <script>
+		// Lógica para cargar solo actas FIRMADAS en el select
+		    async function cargarActasFirmadas() {
+		        const res = await fetch('/api/actas');
+		        if(res.ok) {
+		            const actas = await res.json();
+		            const select = document.getElementById('actaSelect');
+		            select.innerHTML = '<option value="">Seleccione Acta Firmada...</option>';
+		            actas.filter(a => a.estado === 'FIRMADA').forEach(a => {
+		                select.innerHTML += `<option value="${a.id}">${a.id} - Cliente: ${a.clienteId}</option>`;
+		            });
+		        }
+		    }
+
+		    document.getElementById('formCrearOrden').addEventListener('submit', async (e) => {
+		        e.preventDefault();
+		        const actaId = document.getElementById('actaSelect').value;
+		        const ruta = document.getElementById('rutaSelect').value;
+
+		        const res = await fetch('/api/ordenes', {
+		            method: 'POST',
+		            headers: {'Content-Type': 'application/json'},
+		            body: JSON.stringify({ 
+		                actaConsolidacionId: actaId, 
+		                destino: ruta,
+		                vehiculoId: "V-PROPIO-01" 
+		            })
+		        });
+
+		        if(res.ok) {
+		            const data = await res.json();
+		            alert("Orden " + data.id + " creada y vinculada correctamente.");
+		            // Actualizar el campo de aprobación de abajo para fluidez
+		            document.getElementById('ordenId').value = data.id;
+		        } else {
+		            alert("ERROR: No se puede crear orden. Verifique que el acta esté firmada.");
+		        }
+		    });
+
+		    window.onload = () => {
+		        cargarActasFirmadas();
+		        // ... otras cargas ...
+		    };
+
+        // --- CONTROL BIOMÉTRICO (Técnico de Flota) ---
+        document.getElementById('formBiometrico').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const ordenId = document.getElementById('bioOrdenId').value;
+            const conductorId = document.getElementById('bioConductorId').value;
+            const huellaValida = document.getElementById('simuladorHuella').value === 'true'; // Boolean
+            
+            const resDiv = document.getElementById('resultadoBiometrico');
+            resDiv.classList.add('hidden');
+
+            try {
+                // Este endpoint lo creamos en ControlSalidaController.java
+                const res = await fetch('/api/control-salida/biometrico', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ordenId: ordenId,
+                        conductorId: conductorId,
+                        huellaValida: huellaValida
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    resDiv.classList.remove('hidden');
+                    // Evaluar el estado que devuelve el backend (EXITOSO o FALLIDO)
+                    if (data.estado === 'EXITOSO') {
+                        resDiv.className = "mt-4 p-4 rounded text-center border-2 font-bold shadow-inner bg-green-100 border-green-500 text-green-800";
+                        resDiv.innerHTML = `✅ ACCESO CONCEDIDO<br><span class="text-sm font-normal">Registro: ${data.id}<br>Vehículo autorizado para salir.</span>`;
+                    } else {
+                        resDiv.className = "mt-4 p-4 rounded text-center border-2 font-bold shadow-inner bg-red-100 border-red-500 text-red-800";
+                        resDiv.innerHTML = `❌ ACCESO DENEGADO<br><span class="text-sm font-normal">Registro: ${data.id}<br>Motivo: ${data.observaciones}</span>`;
+                    }
+                } else {
+                    // Si falla (Ej. La orden no está aprobada por REQ-017)
+                    resDiv.classList.remove('hidden');
+                    resDiv.className = "mt-4 p-4 rounded text-center border-2 font-bold shadow-inner bg-yellow-100 border-yellow-500 text-yellow-800";
+                    resDiv.innerHTML = `⚠️ ERROR DE VALIDACIÓN<br><span class="text-sm font-normal">La orden de despacho no está APROBADA o no existe.</span>`;
+                }
+            } catch (err) { alert('Error de conexión.'); }
+        });
+    </script>
+</body>
+</html>

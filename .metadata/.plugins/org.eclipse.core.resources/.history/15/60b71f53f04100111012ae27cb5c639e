@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Fichas - Eco-Logística</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-green-700 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">🌱 Eco-Logística Verde en Movimiento| Agente de Admisión</h1>
+            <a href="index.html" class="hover:underline text-green-200">← Logout</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-8 p-4 grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <section class="flex flex-col gap-6">
+            
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500">
+                <h2 class="text-2xl font-bold text-green-800 mb-4">Crear ficha de admisión</h2>
+                <form id="formCrearFicha" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">ID del comprobante físico</label>
+                        <input type="text" id="comprobanteId" required class="mt-1 block w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" placeholder="Ej. COMP-9982">
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition">
+                        Crear ficha (REQ-001)
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-gray-400 flex-1">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">🕒 Historial de sesión</h3>
+                <p class="text-xs text-gray-500 mb-4">Las fichas creadas recientemente aparecerán aquí para facilitar su copiado.</p>
+                
+                <ul id="historialFichas" class="space-y-2 overflow-y-auto max-h-60">
+                    </ul>
+            </div>
+        </section>
+
+
+        <section class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500 h-fit">
+            <h2 class="text-2xl font-bold text-blue-800 mb-4">Consultar y aprobar ficha</h2>
+            
+            <form id="formConsultarFicha" class="space-y-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Pegue el ID de la ficha generada</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="text" id="consultaFichaId" required class="flex-1 p-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500" placeholder="ID de la Ficha">
+                        <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="resultadoConsulta" class="hidden border border-gray-200 rounded p-4 bg-gray-50">
+                <p><strong>ID:</strong> <span id="resId"></span></p>
+                <p><strong>Comprobante:</strong> <span id="resComprobante"></span></p>
+                <p><strong>Estado:</strong> <span id="resEstado" class="font-bold"></span></p>
+                <p><strong>Fecha:</strong> <span id="resFecha"></span></p>
+                
+                <button id="btnAprobar" class="mt-4 w-full bg-yellow-500 text-white font-bold py-2 px-4 rounded hover:bg-yellow-600 transition hidden shadow-md">
+                    ✅ Aprobar  ficha REQ-003)
+                </button>
+            </div>
+            
+            <div id="msgError" class="mt-4 hidden p-3 bg-red-100 text-red-800 border border-red-300 rounded text-sm text-center font-bold"></div>
+        </section>
+
+    </main>
+
+    <script>
+        // Función Global para Copiar al Portapapeles
+        function copiarID(idTexto) {
+            navigator.clipboard.writeText(idTexto).then(() => {
+                alert("📋 ¡Copiado!");
+            }).catch(err => {
+                console.error("No se pudo copiar: ", err);
+            });
+        }
+
+        // Crear Ficha
+        document.getElementById('formCrearFicha').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const comprobanteId = document.getElementById('comprobanteId').value;
+            
+            try {
+                const response = await fetch('/api/fichas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comprobanteId: comprobanteId })
+                });
+
+                if(response.ok) {
+                    const data = await response.json();
+                    document.getElementById('formCrearFicha').reset();
+
+                    // AGREGAR AL HISTORIAL
+                    const historial = document.getElementById('historialFichas');
+                    const nuevoItem = document.createElement('li');
+                    nuevoItem.className = "flex justify-between items-center bg-gray-50 p-3 rounded border border-gray-200 text-sm shadow-sm";
+                    nuevoItem.innerHTML = `
+                        <span class="font-mono text-gray-700 font-bold">${data.id}</span>
+                        <button type="button" onclick="copiarID('${data.id}')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded text-xs font-bold transition">
+                            📋 Copiar
+                        </button>
+                    `;
+                    historial.prepend(nuevoItem); // Lo agrega en la parte superior de la lista
+                }
+            } catch (error) { alert("Error al conectar con el servidor."); }
+        });
+
+        // Consultar Ficha
+        document.getElementById('formConsultarFicha').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('consultaFichaId').value;
+            const resDiv = document.getElementById('resultadoConsulta');
+            const errDiv = document.getElementById('msgError');
+            const btnAprobar = document.getElementById('btnAprobar');
+
+            resDiv.classList.add('hidden');
+            errDiv.classList.add('hidden');
+            btnAprobar.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/fichas/${id}`);
+                if(response.ok) {
+                    const data = await response.json();
+                    document.getElementById('resId').innerText = data.id;
+                    document.getElementById('resComprobante').innerText = data.comprobanteId;
+                    
+                    const estadoSpan = document.getElementById('resEstado');
+                    estadoSpan.innerText = data.estado;
+                    estadoSpan.className = data.estado === 'CREADA' ? 'text-yellow-600 font-bold' : 'text-green-600 font-bold';
+                    document.getElementById('resFecha').innerText = new Date(data.fechaCreacion).toLocaleString();
+
+                    if(data.estado === 'CREADA') {
+                        btnAprobar.classList.remove('hidden');
+                        btnAprobar.onclick = () => aprobarFicha(data.id);
+                    }
+                    resDiv.classList.remove('hidden');
+                } else {
+                    errDiv.innerText = "Ficha no encontrada en la base de datos.";
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (error) { errDiv.innerText = "Error de red."; errDiv.classList.remove('hidden'); }
+        });
+
+        // Aprobar Ficha
+        async function aprobarFicha(id) {
+            try {
+                const response = await fetch(`/api/fichas/${id}/aprobar`, { method: 'PATCH' });
+                if(response.ok) {
+                    alert("¡Ficha aprobada correctamente por el Agente de Admisión!");
+                    document.getElementById('formConsultarFicha').dispatchEvent(new Event('submit'));
+                }
+            } catch (error) { alert("Error al conectar con el servidor."); }
+        }
+    </script>
+</body>
+</html>

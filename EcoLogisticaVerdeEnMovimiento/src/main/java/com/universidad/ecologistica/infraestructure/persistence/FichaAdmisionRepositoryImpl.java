@@ -5,6 +5,8 @@ package com.universidad.ecologistica.infraestructure.persistence;
 import org.springframework.stereotype.Component;
 import com.universidad.ecologistica.domain.model.FichaAdmision;
 import com.universidad.ecologistica.domain.repository.FichaAdmisionRepository;
+
+import java.util.List;
 import java.util.Optional;
 
 @Component // crear objeto de la clase automaticamente
@@ -24,5 +26,9 @@ public class FichaAdmisionRepositoryImpl implements FichaAdmisionRepository {
     @Override
     public Optional<FichaAdmision> buscarPorId(String id) {
         return jpaRepository.findById(id); // busqueda a SpringData
+    }
+    @Override
+    public List<FichaAdmision> listarTodas() {
+        return jpaRepository.findAll();
     }
 }

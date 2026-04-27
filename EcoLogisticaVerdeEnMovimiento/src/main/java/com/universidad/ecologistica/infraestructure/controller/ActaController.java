@@ -4,6 +4,8 @@ import org.springframework.web.bind.annotation.*;
 import com.universidad.ecologistica.application.usecase.*;
 import com.universidad.ecologistica.domain.model.ActaConsolidacion;
 import com.universidad.ecologistica.domain.repository.ActaRepository;
+
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -40,6 +42,10 @@ public class ActaController {
     public ActaConsolidacion consultar(@PathVariable String id) {
         return repository.buscarPorId(id)
                 .orElseThrow(() -> new RuntimeException("Acta no encontrada."));
+    }
+    @GetMapping
+    public List<ActaConsolidacion> listar() {
+        return repository.listarTodas();
     }
 
 }

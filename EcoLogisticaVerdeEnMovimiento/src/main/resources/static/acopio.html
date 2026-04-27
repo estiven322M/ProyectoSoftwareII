@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jefe de Acopio - Eco-Logística</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-amber-700 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">📦 Eco-Logística | Gestión de Zona de Acopio</h1>
+            <a href="index.html" class="hover:underline text-amber-200">← Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-6 p-4 space-y-8">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <section class="bg-white p-5 rounded-lg shadow border-t-4 border-green-500">
+                <h2 class="font-bold text-green-800 mb-4">1. Mercancía Recibida</h2>
+                <p class="text-[10px] text-gray-500 mb-3 italic">Seleccione las fichas aprobadas por admisión para consolidar en un acta.</p>
+                <div class="overflow-y-auto max-h-64 border rounded">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-gray-50"><tr><th class="p-2 border">ID Ficha</th><th class="p-2 border text-center">Acción</th></tr></thead>
+                        <tbody id="tablaFichasAprobadas"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white p-5 rounded-lg shadow border-t-4 border-amber-500">
+                <h2 class="font-bold text-amber-800 mb-4">2. Consolidar Carga</h2>
+                <form id="formCrearActa" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600">ID del Cliente Destino</label>
+                        <input type="text" id="clienteId" required class="w-full p-2 border rounded text-sm" placeholder="Ej. SAMSUNG-COL">
+                    </div>
+                    <div class="p-3 bg-amber-50 rounded border border-amber-200 text-xs">
+                        <p class="font-bold mb-2">Fichas en esta Acta:</p>
+                        <ul id="fichasSeleccionadas" class="space-y-1">
+                            <li class="text-gray-400 italic">No hay fichas vinculadas</li>
+                        </ul>
+                    </div>
+                    <button type="submit" class="w-full bg-amber-600 text-white py-2 rounded font-bold hover:bg-amber-700 transition">Generar Acta de Consolidación</button>
+                </form>
+            </section>
+
+            <section class="bg-white p-5 rounded-lg shadow border-t-4 border-blue-500">
+                <h2 class="font-bold text-blue-800 mb-4">3. Auditoría de Cajas (Ecoetiquetas)</h2>
+                <div class="space-y-3">
+                    <button onclick="generarPaquetePrueba()" class="text-[10px] bg-blue-50 text-blue-700 p-2 rounded border border-blue-200 hover:bg-blue-100 w-full font-bold">
+                        📸 Simular Escaneo de Caja Física
+                    </button>
+                    
+                    <div class="flex gap-1">
+                        <input type="text" id="ecoetiqueta" class="flex-1 p-2 border rounded text-sm font-mono" placeholder="ID de Ecoetiqueta">
+                        <button onclick="consultarPaquete()" class="bg-blue-600 text-white px-3 rounded font-bold">Ok</button>
+                    </div>
+                    <div id="resPaquete" class="hidden p-3 bg-gray-50 border rounded text-xs space-y-2"></div>
+                </div>
+            </section>
+        </div>
+
+        <section class="bg-white p-6 rounded-lg shadow-md border-t-4 border-slate-700">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-xl font-bold">📊 Tablero de Control y Firma (REQ-005/006)</h2>
+                
+                <div class="flex gap-3">
+                    <select id="filtroEstado" onchange="filtrarActas()" class="p-2 border border-gray-300 rounded text-sm bg-gray-50 font-bold">
+                        <option value="TODOS">Ver todas las actas</option>
+                        <option value="CREADO">🟡 Pendientes de Firma</option>
+                        <option value="FIRMADO">🟢 Listas para Despacho</option>
+                    </select>
+                    <button onclick="cargarTodo()" class="p-2 bg-gray-100 border rounded hover:bg-gray-200">🔄 Actualizar</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left border">
+                    <thead class="bg-slate-700 text-white text-xs uppercase">
+                        <tr>
+                            <th class="p-3 border">ID Acta</th>
+                            <th class="p-3 border">Cliente</th>
+                            <th class="p-3 border">Estado Actual</th>
+                            <th class="p-3 border">Fecha Creación</th>
+                            <th class="p-3 border text-center">Acción Legal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaActasMaster"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let actasOriginales = [];
+        let fichasEnActa = new Set(); // Para evitar duplicados
+
+        // 1. CARGA DE DATOS
+        async function cargarTodo() {
+            cargarFichasInsumo();
+            try {
+                const res = await fetch('/api/actas');
+                if(res.ok) {
+                    actasOriginales = await res.json();
+                    filtrarActas();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function cargarFichasInsumo() {
+            const res = await fetch('/api/fichas');
+            if(res.ok) {
+                const fichas = await res.json();
+                const tbody = document.getElementById('tablaFichasAprobadas');
+                tbody.innerHTML = "";
+                // Solo mostramos las APROBADAS por admisión
+                fichas.filter(f => f.estado === 'APROBADA').forEach(f => {
+                    tbody.innerHTML += `<tr>
+                        <td class="p-2 border font-mono">${f.id}</td>
+                        <td class="p-2 border text-center">
+                            <button onclick="vincularFicha('${f.id}')" class="bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-100">Vincular</button>
+                        </td>
+                    </tr>`;
+                });
+            }
+        }
+
+        // 2. VINCULACIÓN (SIN DUPLICADOS)
+        function vincularFicha(id) {
+            if(fichasEnActa.has(id)) {
+                alert("Esta ficha ya está incluida en el borrador del acta.");
+                return;
+            }
+            fichasEnActa.add(id);
+            actualizarListaVisual();
+        }
+
+        function actualizarListaVisual() {
+            const lista = document.getElementById('fichasSeleccionadas');
+            if(fichasEnActa.size === 0) {
+                lista.innerHTML = '<li class="text-gray-400 italic">No hay fichas vinculadas</li>';
+                return;
+            }
+            lista.innerHTML = "";
+            fichasEnActa.forEach(id => {
+                lista.innerHTML += `<li class="flex justify-between items-center bg-white p-1 mb-1 border rounded">
+                    <span>${id}</span>
+                    <button onclick="desvincularFicha('${id}')" class="text-red-500 font-bold px-1">×</button>
+                </li>`;
+            });
+        }
+
+        function desvincularFicha(id) {
+            fichasEnActa.delete(id);
+            actualizarListaVisual();
+        }
+
+        // 3. FILTROS Y TABLERO
+        function filtrarActas() {
+            const filtro = document.getElementById('filtroEstado').value;
+            const tbody = document.getElementById('tablaActasMaster');
+            tbody.innerHTML = "";
+
+            const filtradas = actasOriginales.filter(a => filtro === "TODOS" || a.estado === filtro);
+
+            if(filtradas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400 italic">No se encontraron registros.</td></tr>';
+                return;
+            }
+
+            filtradas.forEach(a => {
+                const esCreado = a.estado === 'CREADO';
+                tbody.innerHTML += `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-mono font-bold text-blue-700">${a.id}</td>
+                    <td class="p-3 font-bold">${a.clienteId}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-[10px] font-bold ${esCreado ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">
+                            ${a.estado}
+                        </span>
+                    </td>
+                    <td class="p-3 text-gray-500 text-xs">${new Date(a.fechaCreacion).toLocaleString()}</td>
+                    <td class="p-3 text-center">
+                        ${esCreado ? 
+                            `<button onclick="registrarFirma('${a.id}')" class="bg-amber-500 text-white px-3 py-1 rounded text-xs font-bold hover:bg-amber-600 shadow">✍️ Firmar Acta</button>` : 
+                            `<span class="text-xs text-gray-400 italic">🔒 Custodia Firmada</span>`}
+                    </td>
+                </tr>`;
+            });
+        }
+
+        async function registrarFirma(id) {
+            if(!confirm("¿Confirma que ha verificado físicamente la carga y desea firmar el acta?")) return;
+            const res = await fetch(`/api/actas/${id}/firmar`, { method: 'PATCH' });
+            if(res.ok) { alert("Acta Firmada. Mercancía lista para Despacho."); cargarTodo(); }
+        }
+
+        document.getElementById('formCrearActa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(fichasEnActa.size === 0) { alert("Debe vincular al menos una ficha."); return; }
+            
+            const res = await fetch('/api/actas', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ clienteId: document.getElementById('clienteId').value })
+            });
+            if(res.ok) {
+                alert("Acta Generada Exitosamente.");
+                fichasEnActa.clear();
+                actualizarListaVisual();
+                document.getElementById('formCrearActa').reset();
+                cargarTodo();
+            }
+        });
+
+        // 4. PAQUETES (ECOETIQUETAS)
+        let paqueteTemp = "";
+        async function generarPaquetePrueba() {
+            const eco = "ECO-" + Math.floor(Math.random()*9000);
+            await fetch('/api/paquetes/registrar-prueba', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ ecoetiqueta: eco })
+            });
+            document.getElementById('ecoetiqueta').value = eco;
+            alert("Escaneado: " + eco);
+        }
+
+        async function consultarPaquete() {
+            const eco = document.getElementById('ecoetiqueta').value;
+            paqueteTemp = eco;
+            const res = await fetch(`/api/paquetes/${eco}`);
+            if(res.ok) {
+                const p = await res.json();
+                const div = document.getElementById('resPaquete');
+                div.classList.remove('hidden');
+                div.innerHTML = `
+                    <p><strong>Estado:</strong> ${p.estado}</p>
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="aceptarP()" class="bg-green-600 text-white p-1 rounded w-full">Aceptar</button>
+                        <button onclick="rechazarP()" class="bg-red-600 text-white p-1 rounded w-full">Rechazar</button>
+                    </div>`;
+            } else { alert("Paquete no existe"); }
+        }
+
+        async function aceptarP() { await fetch(`/api/paquetes/${paqueteTemp}/aceptar`, {method:'PATCH'}); alert("Aceptado"); consultarPaquete(); }
+        async function rechazarP() { 
+            const m = prompt("Motivo:"); 
+            await fetch(`/api/paquetes/${paqueteTemp}/rechazar`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({motivo:m})}); 
+            alert("Rechazado"); consultarPaquete(); 
+        }
+
+        window.onload = cargarTodo;
+    </script>
+</body>
+</html>

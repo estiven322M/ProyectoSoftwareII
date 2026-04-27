@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco-Logística Verde en Movimiento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <nav class="bg-green-700 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">🌱 Eco-Logística Verde en Movimiento</h1>
+            <span class="text-sm font-light">Logística sostenibles</span>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-10 p-4">
+        <h2 class="text-3xl font-semibold text-center mb-8 text-green-800">Panel de control</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <a href="fichas.html" class="block bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow border-t-4 border-green-500">
+                <div class="text-green-600 text-4xl mb-3">📄</div>
+                <h3 class="text-xl font-bold mb-2">Agente de admisión Eco</h3>
+                <p class="text-gray-600 text-sm">Crear, consultar y aprobar fichas de admisión (REQ-001 a 003).</p>
+            </a>
+
+			<a href="acopio.html" class="block bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow border-t-4 border-amber-500">
+			                <div class="text-amber-600 text-4xl mb-3">📦</div>
+			                <h3 class="text-xl font-bold mb-2">Jefe de acopio</h3>
+			                <p class="text-gray-600 text-sm">Gestionar actas de consolidación y verificación física de paquetes (Ecoetiquetas).</p>
+			            </a>
+
+            <div class="block bg-gray-200 p-6 rounded-lg shadow border-t-4 border-gray-400 opacity-70 cursor-not-allowed">
+                <div class="text-gray-500 text-4xl mb-3">🚚</div>
+                <h3 class="text-xl font-bold mb-2">Coordinador / Flota</h3>
+                <p class="text-gray-600 text-sm">Próximamente: Órdenes de Despacho y Biométrico.</p>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>
