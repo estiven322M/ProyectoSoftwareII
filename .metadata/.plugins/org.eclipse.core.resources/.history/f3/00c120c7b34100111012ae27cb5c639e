@@ -1,0 +1,5 @@
+package com.universidad.ecologistica.application.usecase;
+
+public class AceptarPaqueteUseCase {
+
+}

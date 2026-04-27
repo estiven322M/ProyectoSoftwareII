@@ -1,0 +1,28 @@
+package com.universidad.ecologistica.application.usecase;
+import com.universidad.ecologistica.domain.model.*;
+
+import org.springframework.stereotype.Service;
+import com.universidad.ecologistica.domain.model.FichaAdmision;
+import com.universidad.ecologistica.domain.repository.FichaAdmisionRepository;
+
+@Service
+public class AprobarFichaUseCase {
+    
+    private final FichaAdmisionRepository repository;
+
+    public AprobarFichaUseCase(FichaAdmisionRepository repository) {
+        this.repository = repository;
+    }
+
+    public void ejecutar(String fichaId) {
+        // REQ-002: Consultar (lo usamos aquí para poder aprobar)
+        FichaAdmision ficha = repository.buscarPorId(fichaId)
+                .orElseThrow(() -> new RuntimeException("Ficha no encontrada con ID: " + fichaId));
+        
+        // Aplicamos la lógica de negocio del dominio
+        ficha.aprobar();
+        
+        // Actualizamos el estado en el repositorio
+        repository.guardar(ficha);
+    }
+}

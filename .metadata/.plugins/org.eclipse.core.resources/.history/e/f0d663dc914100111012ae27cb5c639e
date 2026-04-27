@@ -1,0 +1,10 @@
+package com.universidad.ecologistica.infraestructure.persistence;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import com.universidad.ecologistica.domain.model.FichaAdmision;
+
+@Repository
+public interface JpaFichaRepository extends JpaRepository<FichaAdmision, String> {
+    // No necesitas escribir NADA de código aquí. Spring Boot lo hace por ti.
+}

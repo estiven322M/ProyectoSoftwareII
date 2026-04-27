@@ -1,0 +1,5 @@
+package com.universidad.ecologistica.infraestructure.persistence;
+
+public interface JpaRegistroSalidaRepository {
+
+}

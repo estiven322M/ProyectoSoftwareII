@@ -1,0 +1,58 @@
+package com.universidad.ecologistica.domain.model;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+
+@Entity
+public class FichaAdmision {
+
+    @Id
+    private String id;
+
+    private String comprobanteId;
+
+    @Enumerated(EnumType.STRING)
+    private EstadoFicha estado;
+
+    private LocalDateTime fechaCreacion;
+
+    // Constructor requerido por JPA
+    protected FichaAdmision() {}
+
+    // Constructor interno
+    private FichaAdmision(String id, String comprobanteId) {
+        this.id = id;
+        this.comprobanteId = comprobanteId;
+        this.estado = EstadoFicha.CREADA;
+        this.fechaCreacion = LocalDateTime.now();
+    }
+
+    public String getId() { return id; }
+    public String getComprobanteId() { return comprobanteId; }
+    public EstadoFicha getEstado() { return estado; }
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+
+    public void aprobar() {
+        if (this.estado != EstadoFicha.CREADA) {
+            throw new IllegalStateException(
+                "Solo las fichas recién creadas pueden ser aprobadas."
+            );
+        }
+        this.estado = EstadoFicha.APROBADA;
+    }
+
+    public static class Factory {
+        public static FichaAdmision crearNuevaFicha(String id, String comprobanteId) {
+            if (comprobanteId == null || comprobanteId.isEmpty()) {
+                throw new IllegalArgumentException(
+                    "El comprobante es obligatorio."
+                );
+            }
+            return new FichaAdmision(id, comprobanteId);
+        }
+    }
+}

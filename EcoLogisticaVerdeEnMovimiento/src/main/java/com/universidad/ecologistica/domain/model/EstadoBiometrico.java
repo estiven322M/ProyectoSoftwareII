@@ -1,0 +1,6 @@
+package com.universidad.ecologistica.domain.model;
+
+public enum EstadoBiometrico {
+    EXITOSO,
+    FALLIDO
+}

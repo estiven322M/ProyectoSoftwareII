@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Fichas - Eco-Logística</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-green-700 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">🌱 Eco-Logística | Agente de Admisión</h1>
+            <a href="index.html" class="hover:underline text-green-200">← Inicio</a>
+        </div>
+    </nav>
+
+    <main class="container mx-auto mt-8 p-4 grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-green-800 mb-4">Crear ficha de admisión</h2>
+            <p class="text-gray-600 mb-4 text-sm">Registre un nuevo comprobante físico en el sistema.</p>
+            
+            <form id="formCrearFicha" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">ID del comprobante físico</label>
+                    <input type="text" id="comprobanteId" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500" placeholder="Ej. COMP-9982">
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition">
+                    Crear ficha 
+                </button>
+            </form>
+
+            <div id="msgCrear" class="mt-4 hidden p-3 bg-green-100 text-green-800 rounded text-sm"></div>
+        </section>
+
+
+        <section class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-blue-800 mb-4">Consultar y aprobar ficha</h2>
+            
+            <form id="formConsultarFicha" class="space-y-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">ID de la ficha generada</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="consultaFichaId" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Pegue el ID aquí">
+                        <button type="submit" class="mt-1 bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="resultadoConsulta" class="hidden border border-gray-200 rounded p-4 bg-gray-50">
+                <p><strong>ID:</strong> <span id="resId"></span></p>
+                <p><strong>Comprobante:</strong> <span id="resComprobante"></span></p>
+                <p><strong>Estado:</strong> <span id="resEstado" class="font-bold"></span></p>
+                <p><strong>Fecha:</strong> <span id="resFecha"></span></p>
+                
+                <button id="btnAprobar" class="mt-4 w-full bg-yellow-500 text-white font-bold py-2 px-4 rounded hover:bg-yellow-600 transition hidden">
+                    ✅ Aprobar ficha (REQ-003)
+                </button>
+            </div>
+            <div id="msgError" class="mt-4 hidden p-3 bg-red-100 text-red-800 rounded text-sm"></div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- Lógica REQ-001: Crear Ficha ---
+        document.getElementById('formCrearFicha').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Evita que la página se recargue
+            const comprobanteId = document.getElementById('comprobanteId').value;
+            
+            try {
+                // Llamamos a nuestro controlador Java: POST /api/fichas
+                const response = await fetch('/api/fichas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comprobanteId: comprobanteId })
+                });
+
+                if(response.ok) {
+                    const data = await response.json();
+                    const msgDiv = document.getElementById('msgCrear');
+                    msgDiv.innerHTML = `¡Ficha creada con éxito!<br><strong>Guarde este ID:</strong> ${data.id}`;
+                    msgDiv.classList.remove('hidden');
+                    document.getElementById('formCrearFicha').reset();
+                }
+            } catch (error) {
+                alert("Error al conectar con el servidor.");
+            }
+        });
+
+        // --- Lógica REQ-002: Consultar Ficha ---
+        document.getElementById('formConsultarFicha').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('consultaFichaId').value;
+            const resDiv = document.getElementById('resultadoConsulta');
+            const errDiv = document.getElementById('msgError');
+            const btnAprobar = document.getElementById('btnAprobar');
+
+            // Limpiar vistas
+            resDiv.classList.add('hidden');
+            errDiv.classList.add('hidden');
+            btnAprobar.classList.add('hidden');
+
+            try {
+                // Llamamos a nuestro controlador Java: GET /api/fichas/{id}
+                const response = await fetch(`/api/fichas/${id}`);
+                
+                if(response.ok) {
+                    const data = await response.json();
+                    
+                    // Llenamos los datos en la tarjeta
+                    document.getElementById('resId').innerText = data.id;
+                    document.getElementById('resComprobante').innerText = data.comprobanteId;
+                    
+                    const estadoSpan = document.getElementById('resEstado');
+                    estadoSpan.innerText = data.estado;
+                    estadoSpan.className = data.estado === 'CREADA' ? 'text-yellow-600 font-bold' : 'text-green-600 font-bold';
+                    
+                    document.getElementById('resFecha').innerText = new Date(data.fechaCreacion).toLocaleString();
+
+                    // Mostrar botón de aprobar solo si el estado es CREADA
+                    if(data.estado === 'CREADA') {
+                        btnAprobar.classList.remove('hidden');
+                        btnAprobar.onclick = () => aprobarFicha(data.id); // Asignamos la acción al botón
+                    }
+
+                    resDiv.classList.remove('hidden');
+                } else {
+                    errDiv.innerText = "Ficha no encontrada.";
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                errDiv.innerText = "Error de red.";
+                errDiv.classList.remove('hidden');
+            }
+        });
+
+        // --- Lógica REQ-003: Aprobar Ficha ---
+        async function aprobarFicha(id) {
+            try {
+                // Llamamos a nuestro controlador Java: PATCH /api/fichas/{id}/aprobar
+                const response = await fetch(`/api/fichas/${id}/aprobar`, {
+                    method: 'PATCH'
+                });
+
+                if(response.ok) {
+                    alert("¡Ficha aprobada correctamente!");
+                    // Volver a consultar para que se actualice la pantalla
+                    document.getElementById('formConsultarFicha').dispatchEvent(new Event('submit'));
+                } else {
+                    alert("Error al aprobar la ficha.");
+                }
+            } catch (error) {
+                alert("Error al conectar con el servidor.");
+            }
+        }
+    </script>
+</body>
+</html>

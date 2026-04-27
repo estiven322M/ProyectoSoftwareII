@@ -1,0 +1,57 @@
+package com.universidad.ecologistica.domain.model;
+
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import java.time.LocalDateTime;
+
+@Entity //esta clase es una tabla en la base de datos
+public class FichaAdmision {
+	@Id // clave primaria 
+    private String id;
+	
+    private String comprobanteId;
+    
+    @Enumerated(EnumType.STRING) // guarda el estado como texto (CREADA, APROBADA)
+    private EstadoFicha estado;
+    
+    private LocalDateTime fechaCreacion;
+    
+    // constructor vacio que exige JPA/Hibernate
+    protected FichaAdmision() {};
+
+    // constructor privado para  Factory
+    private FichaAdmision(String id, String comprobanteId) {
+        this.id = id;
+        this.comprobanteId = comprobanteId;
+        this.estado = EstadoFicha.CREADA; // estado inicial default
+        this.fechaCreacion = LocalDateTime.now();
+    }
+
+    // Getters
+    public String getId() { return id; }
+    public String getComprobanteId() { return comprobanteId; }
+    public EstadoFicha getEstado() { return estado; }
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+
+    // Comportamiento para REQ-003 (Aprobar Ficha)
+    public void aprobar() {
+        if (this.estado != EstadoFicha.CREADA) {
+            throw new IllegalStateException("Solo las fichas recién creadas pueden ser aprobadas.");
+        }
+        this.estado = EstadoFicha.APROBADA;
+    }
+
+    // Factory Method (Patrón de Diseño Creacional para REQ-001)
+    public static class Factory {
+        public static FichaAdmision crearNuevaFicha(String id, String comprobanteId) {
+            if (comprobanteId == null || comprobanteId.isEmpty()) {
+                throw new IllegalArgumentException("El comprobante es obligatorio para crear la Ficha de Admisión.");
+            }
+            return new FichaAdmision(id, comprobanteId);
+        }
+    }
+}

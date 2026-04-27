@@ -1,0 +1,30 @@
+package com.universidad.ecologistica.applicacation.usecase;
+
+import org.springframework.stereotype.Service;
+import com.universidad.ecologistica.domain.model.FichaAdmision;
+import com.universidad.ecologistica.domain.repository.FichaAdmisionRepository;
+import java.util.UUID;
+
+@Service
+public class CrearFichaUseCase {
+    
+    private final FichaAdmisionRepository repository;
+
+    // Inyección de dependencias por constructor (Buena práctica de Ingeniería)
+    public CrearFichaUseCase(FichaAdmisionRepository repository) {
+        this.repository = repository;
+    }
+
+    public FichaAdmision ejecutar(String comprobanteId) {
+        // Generamos un ID único para la ficha
+        String idGenerado = UUID.randomUUID().toString();
+        
+        // Usamos el Factory Method del dominio
+        FichaAdmision nuevaFicha = FichaAdmision.Factory.crearNuevaFicha(idGenerado, comprobanteId);
+        
+        // Guardamos a través de la interfaz (abstracción)
+        repository.guardar(nuevaFicha);
+        
+        return nuevaFicha;
+    }
+}
